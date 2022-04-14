@@ -7,10 +7,10 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "vite": "^2.6.4"
+    "vite": "^2.9.4"
   },
   "dependencies": {
-    "@xstate/inspect": "^0.5.0",
-    "xstate": "^4.25.0"
+    "@xstate/inspect": "^0.5.2",
+    "xstate": "^4.31.0"
   }
 }
