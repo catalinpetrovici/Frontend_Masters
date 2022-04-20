@@ -363,10 +363,10 @@ var object = counter(10),
   up = object.up,
   down = object.down;
 
-console.log(up()); // 11
-console.log(down()); // 10
-console.log(down()); // 9
-console.log(up()); // 10
+// console.log(up()); // 11
+// console.log(down()); // 10
+// console.log(down()); // 9
+// console.log(up()); // 10
 
 //////////////////////////////////////////
 
@@ -377,13 +377,286 @@ function revocable(binary) {
         return binary(first, second);
       }
     },
-    revoke: () => {binary = undefined};
+    revoke: () => {
+      binary = undefined;
+    },
   };
 }
 
 let rev = revocable(add),
   add_rev = rev.invoke;
 
-console.log(add_rev(3, 4)); //7
-console.log(rev.revoke());
-console.log(add_rev(5, 7)); //undefined
+// console.log(add_rev(3, 4)); //7
+// console.log(rev.revoke());
+// console.log(add_rev(5, 7)); //undefined
+
+////////////////////////////////////////// Function Challenge 8
+
+function m(value, source) {
+  return {
+    value: value,
+    source: typeof source === 'string' ? source : String(value),
+  };
+}
+// console.log(JSON.stringify(m(1))); // value : 1, source : 1
+// console.log(JSON.stringify(m(Math.PI, 'pi'))); // value 3.14 , source : pi
+
+//////////////////////////////////////////
+
+function addm(a, b) {
+  return m(a.value + b.value, `(${a.source}+${b.source})`);
+}
+
+// console.log(JSON.stringify(addm(m(3), m(4)))); // value : 7, source : "(3+4)"
+// console.log(JSON.stringify(addm(m(1), m(Math.PI, 'pi')))); // value 4.14159 , source : "(1+pi)"
+
+//////////////////////////////////////////
+
+function liftm(binary, op) {
+  return function (a, b) {
+    return m(binary(a.value, b.value), `(${a.source}${op}${b.source})`);
+  };
+}
+
+var addm = liftm(add, '+');
+
+// console.log(JSON.stringify(addm(m(3), m(4)))); // value : 7, source : "(3+4)"
+// console.log(JSON.stringify(liftm(mul, '*')(m(3), m(4)))); // value : 12, source : "(3*4)"
+
+//////////////////////////////////////////
+
+function liftm(binary, op) {
+  return function (a, b) {
+    if (typeof a === 'number') {
+      a = m(a);
+    }
+    if (typeof b === 'number') {
+      b = m(b);
+    }
+    return m(binary(a.value, b.value), `(${a.source}${op}${b.source})`);
+  };
+}
+
+var addm = liftm(add, '+');
+
+// console.log(JSON.stringify(addm(3, 4))); //value : 7, source : "(3+4)"
+
+////////////////////////////////////////// Function Challenge 9
+
+function exp(value) {
+  return Array.isArray(value) ? value[0](value[1], value[2]) : value;
+}
+
+var sae = [mul, 5, 11];
+// console.log(exp(sae)); // 55
+// console.log(exp(42)); //42
+
+//////////////////////////////////////////
+
+function exp(value) {
+  return Array.isArray(value) ? value[0](exp(value[1]), exp(value[2])) : value;
+}
+
+var nae = [Math.sqrt, [add, [square, 3], [square, 4]]];
+// console.log(exp(nae)); // 5
+
+//////////////////////////////////////////
+
+function addg(first) {
+  function more(next) {
+    if (next === undefined) {
+      return first;
+    }
+    first += next;
+    return more;
+  }
+  if (first !== undefined) {
+    return more;
+  }
+}
+// console.log(addg()); // undefined
+// console.log(addg(2)()); // 2
+// console.log(addg(2)(7)()); // 9
+// console.log(addg(3)(0)(4)()); // 7
+// console.log(addg(1)(2)(4)(8)()); // 15
+
+////////////////////////////////////////// Function Challenge 10
+
+function liftg(binary) {
+  return function (first) {
+    if (first === undefined) {
+      return first;
+    }
+    return function more(next) {
+      if (next === undefined) {
+        return first;
+      }
+      first = binary(first, next);
+      return more;
+    };
+  };
+}
+
+// console.log(liftg(mul)()); // undefined
+// console.log(liftg(mul)(3)()); // 3
+// console.log(liftg(mul)(3)(0)(4)()); // 0
+// console.log(liftg(mul)(1)(2)(4)(8)()); //64
+
+//////////////////////////////////////////
+
+function arrayg(first) {
+  var array = [];
+  function more(next) {
+    if (next === undefined) {
+      return array;
+    }
+    array.push(next);
+    return more;
+  }
+  return more(first);
+}
+
+// console.log(arrayg()); // []
+// console.log(arrayg(3)()); // [3]
+// console.log(arrayg(3)(4)(5)()); // [3,4,5]
+
+//////////////////////////////////////////
+
+// function continuize(unary) {
+//   return (callback, arg) => callback(unary(arg));
+// }
+function continuize(any) {
+  return (callback, ...x) => callback(any(...x));
+}
+
+var sqrtc = continuize(Math.sqrt);
+// sqrtc(console.log, [81]); // 9
+
+////////////////////////////////////////// Building a Better Constructor
+
+function constructor(init) {
+  var that = other_constructor(init),
+    member,
+    method = function () {
+      // init, member, method
+    };
+  that.method = method;
+  return that;
+}
+
+// next pattern
+
+function constructor(spec) {
+  let { member } = spec;
+  const { other } = other_constructor(spec);
+  const method = function () {
+    //spec, member, other, method
+  };
+  return Object.freeze({
+    method,
+    other,
+  });
+}
+
+////////////////////////////////////////// Function Challenge 11
+
+// the goal is to protect the array
+
+function vector() {
+  var array = [];
+
+  return {
+    get: function get(i) {
+      return array[i];
+    },
+    store: function store(i, v) {
+      array[i] = v;
+    },
+    append: function append(v) {
+      array.push(v);
+    },
+  };
+}
+
+// let myvector = vector();
+// console.log(myvector.append(7));
+// console.log(myvector.store(1, 8));
+// console.log(myvector.get(0)); // 7
+// console.log(myvector.get(1)); // 8
+
+// var stash;
+// myvector.store('push', function () {
+//   stash = this;
+//   console.log(__pho);
+// });
+// myvector.append();
+
+function vector() {
+  var array = [];
+
+  return {
+    get: function get(i) {
+      return array[+i];
+    },
+    store: function store(i, v) {
+      array[+i] = v;
+    },
+    append: function append(v) {
+      array[array.length] = v;
+    },
+  };
+}
+
+let myvector = vector();
+myvector.append(7);
+myvector.append(9);
+myvector.store(1, 8);
+myvector.store(4, 23);
+myvector.append(5);
+console.log(myvector.get(0)); // 7
+console.log(myvector.get(1)); // 8
+console.log(myvector.get(2)); // undefined
+console.log(myvector.get(3)); // undefined
+console.log(myvector.get(4)); // 5
+console.log(myvector.get(5)); // 23
+
+////////////////////////////////////////// Function Challenge 12
+function pubsub() {
+  var subscribers = [];
+  return {
+    subscribe: function (subscriber) {
+      subscribers.push(subscriber);
+    },
+    publish: function (publication) {
+      var i,
+        length = subscribers.length;
+      for (i = 0; i < length; i += 1) {
+        subscribers[i](publication);
+      }
+    },
+  };
+}
+
+let my_pubsub = pubsub();
+console.log(my_pubsub.subscribe(log));
+console.log(my_pubsub.publish('It works!')); // It works
+
+// Securing the pubsub() Function
+
+function pubsub() {
+  var subscribers = [];
+  return {
+    subscribe: function (subscriber) {
+      subscribers.push(subscriber);
+    },
+    publish: function (publication) {
+      var i,
+        length = subscribers.length;
+      subscribers.forEach(function (s) {
+        try {
+          subscribers[i](publication);
+        } catch (ignore) {}
+      });
+    },
+  };
+}
